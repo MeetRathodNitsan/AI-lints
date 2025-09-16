@@ -1,40 +1,43 @@
 import os
 import requests
-import sys
 
-# --- Collect all Python files in the project
-files_to_check = []
+LINT_ENDPOINT = "http://localhost:8000/lint"
+OUTPUT_FILE = "lint_results.txt"
 
-for root, dirs, files in os.walk("."):
-    for file in files:
-        if file.endswith(".py"):
-            path = os.path.join(root, file)
-            with open(path, "r", encoding="utf-8") as f:
-                code = f.read()
-            files_to_check.append({"file": path, "code": code})
+def get_all_py_files():
+    py_files = []
+    for root, _, files in os.walk("."):
+        for f in files:
+            if f.endswith(".py"):
+                py_files.append(os.path.join(root, f))
+    return py_files
 
-if not files_to_check:
-    print("⚠️ No Python files found to lint.")
-    sys.exit(0)
+def read_file(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return f.read()
 
-# --- Send files to FastAPI lint endpoint
-try:
-    resp = requests.post("http://localhost:8000/lint", json={"files": files_to_check})
-    resp.raise_for_status()
-except requests.exceptions.RequestException as e:
-    print("❌ Failed to contact lint service:", e)
-    sys.exit(1)
+def lint_file(file_path, code):
+    try:
+        response = requests.post(LINT_ENDPOINT, json={"diff": code}, timeout=60)
+        response.raise_for_status()
+        return response.text.strip()
+    except requests.exceptions.RequestException as e:
+        return f"Error linting {file_path}: {e}"
 
-result = resp.json()
+def main():
+    py_files = get_all_py_files()
+    if not py_files:
+        print("⚠️ No Python files found to lint.")
+        return
 
-# --- Print AI lint results
-fixes = result.get("fixes", [])
-if not fixes:
-    print("✅ No fixes suggested by AI.")
-else:
-    print("=== AI Lint Suggestions ===")
-    for fix in fixes:
-        print(f"\nFile: {fix['file']}")
-        print("----- Old Code -----\n", fix["old_code"])
-        print("----- New Code -----\n", fix["new_code"])
-        print("Explanation:", fix["explanation"])
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as out:
+        for file_path in py_files:
+            code = read_file(file_path)
+            out.write(f"\n=== Linting {file_path} ===\n")
+            result = lint_file(file_path, code)
+            out.write(result + "\n")
+
+    print(f"✅ Lint results saved to {OUTPUT_FILE}")
+
+if __name__ == "__main__":
+    main()

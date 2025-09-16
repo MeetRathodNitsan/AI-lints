@@ -1,46 +1,45 @@
-import os
+from fastapi import FastAPI, Response
+from pydantic import BaseModel
 import requests
 
-LINT_ENDPOINT = "http://localhost:8000/lint"
-OUTPUT_FILE = "lint_results.txt"
+app = FastAPI()
 
-def get_all_py_files():
-    """Recursively collect all Python files in the repo."""
-    py_files = []
-    for root, _, files in os.walk("."):
-        for f in files:
-            if f.endswith(".py"):
-                path = os.path.join(root, f)
-                py_files.append(path)
-    return py_files
+class DiffInput(BaseModel):
+    diff: str
 
-def read_file(file_path):
-    with open(file_path, "r", encoding="utf-8") as f:
-        return f.read()
+@app.post("/lint")
+def lint_code(input: DiffInput):
+    prompt = f"""
+You are an AI code linter.
+Return ONLY plain text:
 
-def lint_file(file_path, code):
-    """Send file content to /lint endpoint."""
+Mistake:
+<the buggy code snippet or issue>
+
+Corrected:
+<the fully fixed code>
+
+Explanation:
+<the explanation>
+
+Diff:
+{input.diff}
+"""
     try:
-        response = requests.post(LINT_ENDPOINT, json={"diff": code}, timeout=60)
-        response.raise_for_status()
-        return response.text.strip()
-    except requests.exceptions.RequestException as e:
-        return f"Error linting {file_path}: {e}"
-
-def main():
-    py_files = get_all_py_files()
-    if not py_files:
-        print("⚠️ No Python files found to lint.")
-        return
-
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as out:
-        for file_path in py_files:
-            code = read_file(file_path)
-            out.write(f"\n=== Linting {file_path} ===\n")
-            result = lint_file(file_path, code)
-            out.write(result + "\n")
-
-    print(f"✅ Lint results saved to {OUTPUT_FILE}")
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "qwen2.5:7b-instruct-q4_k_m",
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0},
+            },
+            timeout=60,
+        )
+        raw_output = response.json().get("response", "").strip()
+        return Response(content=raw_output, media_type="text/plain")
+    except Exception as e:
+        return Response(content=f"Error: {str(e)}", media_type="text/plain")
 
 if __name__ == "__main__":
     import uvicorn
