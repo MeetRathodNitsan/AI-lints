@@ -1,55 +1,46 @@
-from fastapi import FastAPI, Response
-from pydantic import BaseModel
+import os
 import requests
 
-app = FastAPI()
+LINT_ENDPOINT = "http://localhost:8000/lint"
+OUTPUT_FILE = "lint_results.txt"
 
-class DiffInput(BaseModel):
-    diff: str
+def get_all_py_files():
+    """Recursively collect all Python files in the repo."""
+    py_files = []
+    for root, _, files in os.walk("."):
+        for f in files:
+            if f.endswith(".py"):
+                path = os.path.join(root, f)
+                py_files.append(path)
+    return py_files
 
-@app.post("/lint")
-def lint_code(input: DiffInput):
-    # Create prompt for AI
-    prompt = f"""
-You are an AI code linter.
-You will be given a Git diff.
-Return ONLY plain text, in this format:
+def read_file(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return f.read()
 
-Mistake:
-<the buggy code snippet or issue>
-
-Corrected:
-<the fully fixed code>
-
-Explanation:
-<the explanation of the corrected code snippet>
-
-
-Diff:
-{input.diff}
-"""
+def lint_file(file_path, code):
+    """Send file content to /lint endpoint."""
     try:
-        response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={
-                "model": "qwen2.5:7b-instruct-q4_k_m",
-                "prompt": prompt,
-                "stream": False,
-                "options": {"temperature": 0},  # deterministic
-            },
-            timeout=60,
-        )
+        response = requests.post(LINT_ENDPOINT, json={"diff": code}, timeout=60)
+        response.raise_for_status()
+        return response.text.strip()
+    except requests.exceptions.RequestException as e:
+        return f"Error linting {file_path}: {e}"
 
-        # Get AI output
-        raw_output = response.json().get("response", "").strip()
+def main():
+    py_files = get_all_py_files()
+    if not py_files:
+        print("⚠️ No Python files found to lint.")
+        return
 
-        # Return as plain text
-        return Response(content=raw_output, media_type="text/plain")
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as out:
+        for file_path in py_files:
+            code = read_file(file_path)
+            out.write(f"\n=== Linting {file_path} ===\n")
+            result = lint_file(file_path, code)
+            out.write(result + "\n")
 
-    except Exception as e:
-        return Response(content=f"Error: {str(e)}", media_type="text/plain")
-
+    print(f"✅ Lint results saved to {OUTPUT_FILE}")
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    main()
