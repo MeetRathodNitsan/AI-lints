@@ -22,18 +22,18 @@ jobs:
     - name: Install dependencies
       run: |
         python -m venv .venv
-        source .venv/bin/activate
-        pip install -r requirements.txt
-        pip install requests fastapi uvicorn
+        .venv/bin/pip install --upgrade pip
+        .venv/bin/pip install -r requirements.txt
+        .venv/bin/pip install requests fastapi uvicorn
 
     - name: Start AI Lint Server
       run: |
-        nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
+        nohup .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 &
+        sleep 5
 
     - name: Run AI Lint
       run: |
-        source .venv/bin/activate
-        python ai_lint.py > lint_results.txt
+        .venv/bin/python ai_lint.py > lint_results.txt
 
     - name: Check Lint Results
       run: |
@@ -45,7 +45,5 @@ jobs:
           exit 1
         elif grep -q "SUGGESTION" lint_results.txt; then
           echo "⚠️ Suggestions found. Please review."
-          # Pause for review (GitHub requires manual approval step)
         else
           echo "✅ No issues. Proceeding..."
-        fi

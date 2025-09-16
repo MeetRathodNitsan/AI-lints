@@ -1,7 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from pydantic import BaseModel
 import requests
-import json
 
 app = FastAPI()
 
@@ -10,26 +9,25 @@ class DiffInput(BaseModel):
 
 @app.post("/lint")
 def lint_code(input: DiffInput):
+    # Create prompt for AI
     prompt = f"""
 You are an AI code linter.
-You will be given a Git diff. 
-Return ONLY valid JSON in this format:
+You will be given a Git diff.
+Return ONLY plain text, in this format:
 
-{{
-  "fixes": [
-    {{
-      "file": "FILENAME",
-      "old_code": "OLD CODE SNIPPET",
-      "new_code": "NEW FIXED CODE SNIPPET",
-      "explanation": "WHY THIS FIX WAS MADE"
-    }}
-  ]
-}}
+Mistake:
+<the buggy code snippet or issue>
+
+Corrected:
+<the fully fixed code>
+
+Explanation:
+<the explanation of the corrected code snippet>
+
 
 Diff:
 {input.diff}
 """
-
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
@@ -37,33 +35,21 @@ Diff:
                 "model": "qwen2.5:7b-instruct-q4_k_m",
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": 0},  # make output deterministic
+                "options": {"temperature": 0},  # deterministic
             },
             timeout=60,
         )
 
+        # Get AI output
         raw_output = response.json().get("response", "").strip()
 
-        # Try to extract JSON only
-        start = raw_output.find("{")
-        end = raw_output.rfind("}") + 1
-        json_str = raw_output[start:end]
-
-        fixes = json.loads(json_str)  # ✅ safe parsing
+        # Return as plain text
+        return Response(content=raw_output, media_type="text/plain")
 
     except Exception as e:
-        fixes = {
-            "fixes": [
-                {
-                    "file": "unknown",
-                    "old_code": "",
-                    "new_code": "",
-                    "explanation": f"Error parsing AI response: {str(e)}. Raw output: {raw_output}",
-                }
-            ]
-        }
+        return Response(content=f"Error: {str(e)}", media_type="text/plain")
 
-    return fixes
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
