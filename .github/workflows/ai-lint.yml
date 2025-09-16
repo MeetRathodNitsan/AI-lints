@@ -1,0 +1,51 @@
+name: AI Code Lint
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+jobs:
+  ai-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m venv .venv
+        source .venv/bin/activate
+        pip install -r requirements.txt
+        pip install requests fastapi uvicorn
+
+    - name: Start AI Lint Server
+      run: |
+        nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
+
+    - name: Run AI Lint
+      run: |
+        source .venv/bin/activate
+        python ai_lint.py > lint_results.txt
+
+    - name: Check Lint Results
+      run: |
+        echo "=== AI Lint Results ==="
+        cat lint_results.txt
+
+        if grep -q "BUG" lint_results.txt; then
+          echo "❌ Bugs found. Blocking pipeline."
+          exit 1
+        elif grep -q "SUGGESTION" lint_results.txt; then
+          echo "⚠️ Suggestions found. Please review."
+          # Pause for review (GitHub requires manual approval step)
+        else
+          echo "✅ No issues. Proceeding..."
+        fi
