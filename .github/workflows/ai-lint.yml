@@ -44,3 +44,7 @@ jobs:
           echo "❌ Bugs found. Blocking pipeline."
           exit 1
         elif grep -q "SUGGESTION" lint_results.txt; then
+          echo "⚠️ Suggestions found. Please review."
+        else
+          echo "✅ No issues. Proceeding..."
+        fi
