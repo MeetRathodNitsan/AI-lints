@@ -1,26 +1,18 @@
-import subprocess
+import os
 import requests
-import sys
 
-def get_diff():
-    try:
-        # Compare last two commits
-        return subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"]).decode()
-    except subprocess.CalledProcessError:
-        try:
-            # Fallback: current unstaged changes
-            return subprocess.check_output(["git", "diff"]).decode()
-        except subprocess.CalledProcessError:
-            return ""
+files_to_check = []
 
-diff = get_diff()
+for root, dirs, files in os.walk("."):
+    for file in files:
+        if file.endswith(".py"):
+            path = os.path.join(root, file)
+            with open(path, "r") as f:
+                code = f.read()
+            files_to_check.append({"file": path, "code": code})
 
-if not diff.strip():
-    print("⚠️ No changes found to lint.")
-    sys.exit(0)
-
-# Send diff to FastAPI lint service
-resp = requests.post("http://localhost:8000/lint", json={"diff": diff})
+# Send all files to your FastAPI lint service
+resp = requests.post("http://localhost:8000/lint", json={"files": files_to_check})
 resp.raise_for_status()
 result = resp.json()
 

@@ -5,7 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="767208ad-f709-4b21-8a1d-c817d19f6498" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/ai-lint.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/ai-lint.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai_lint.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai_lint.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/buggy_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/buggy_main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,7 +94,7 @@
       <workItem from="1758015110194" duration="94000" />
       <workItem from="1758015592052" duration="1782000" />
       <workItem from="1758017385996" duration="1000" />
-      <workItem from="1758017402057" duration="3672000" />
+      <workItem from="1758017402057" duration="4084000" />
     </task>
     <servers />
   </component>
