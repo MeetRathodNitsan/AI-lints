@@ -1,106 +1,90 @@
-# Buggy Python App: Inventory Management + User Actions
+# Buggy Python App: User Management + File Operations
 
 import os
 import json
 import random
-from datetime import datetime
-
-class Product:
-    def __init__(self, name, price, qty):
-        self.name = name
-        self.price = price
-        self.qty = qty
-
-    def display(self):
-        print(f"Product: {name}, Price: {price}, Qty: {qty}")  # ❌ should use self.name, self.price, self.qty
-
-class Inventory:
-    def __init__(self):
-        self.items = []
-
-    def add_product(self, product):
-        self.items.push(product)  # ❌ wrong method, should be append
-
-    def total_value(self):
-        total = 0
-        for item in self.items:
-            total += item.price * item.qty
-        return total
-
-    def find_product(self, name):
-        for i in self.items:
-            if i.name = name:  # ❌ assignment instead of comparison
-                return i
-        return None
 
 class User:
-    def __init__(self, username, age):
-        self.username = username
-        self.age = str(age)  # ❌ age should be int
-        self.cart = []
+    def __init__(self, nam, age):
+        self.nam = nam  # ❌ typo in variable name
+        self.age = age
+        self.emails = []
 
-    def add_to_cart(self, product):
-        self.cart.add(product)  # ❌ wrong method, should be append
+    def add_email(self, email):
+        self.emails.append(email)
 
-    def checkout(self):
-        total = 0
-        for p in self.cart:
-            total += p.price + ""  # ❌ adding string to number
-        print("Total amount:", total)
+    def greet(self):
+        print("Hello " + username + ", you are " + self.age)  # ❌ undefined variable, wrong type
 
-def divide(a, b):
+class UserManager:
+    def __init__(self):
+        self.users = []
+
+    def add_user(self, user):
+        self.users.push(user)  # ❌ wrong method, should be append
+
+    def find_user(self, nam):
+        for u in self.users:
+            if u.nam = nam:  # ❌ assignment instead of comparison
+                return u
+        return None
+
+    def print_all_users(self):
+        for i in range(len(self.users)):
+            print("User: " + self.users[i])  # ❌ users[i] is object, needs .nam
+
+def divide_numbers(a, b):
     return a / 0  # ❌ division by zero
 
-def read_json(file_path):
+def sum_list(lst):
+    total = 0
+    for i in range(len(lst)):
+        total += lst[i] + ""  # ❌ converts numbers to string
+    return total
+
+def read_json_file(file_path):
+    # ❌ missing file existence check
     f = open(file_path, 'r')
-    data = json.load(f)
+    data = json.loads(f.read())
     f.close()
     return data
 
-def write_json(file_path, data):
+def write_json_file(file_path, data):
+    # ❌ no exception handling
     f = open(file_path, 'w')
     f.write(json.dumps(data))
     f.close()
 
-def random_discount(price):
-    return price - random.randint(0, 110)  # ❌ can go negative
-
 def main():
-    inv = Inventory()
-    p1 = Product("Laptop", 1000, 5)
-    p2 = Product("Mouse", 25, 50)
-    p3 = Product("Keyboard", 50, "10")  # ❌ qty should be int
+    manager = UserManager()
 
-    inv.add_product(p1)
-    inv.add_product(p2)
-    inv.add_product(p3)
+    u1 = User("Alice", 25)
+    u2 = User("Bob", "30")  # ❌ age should be int
+    u3 = User("Charlie", 22)
 
-    inv.display_all()  # ❌ method doesn't exist
+    manager.add_user(u1)
+    manager.add_user(u2)
+    manager.add_user(u3)
 
-    user1 = User("Alice", "25")
-    user2 = User("Bob", 30)
-
-    user1.add_to_cart(p1)
-    user1.add_to_cart(p2)
-    user1.checkout()
-
-    user2.add_to_cart(p3)
-    user2.checkout()
-
-    print("Total inventory value:", inv.total_value())
+    manager.print_all_users()
 
     # Test division
-    print(divide(100, 10))
+    print(divide_numbers(10, 2))
+
+    # Test sum_list
+    print(sum_list([1, 2, 3, 4]))
+
+    # Test find user
+    user_found = manager.find_user("Alice")
+    if user_found:
+        user_found.greet()
 
     # Test reading JSON
-    try:
-        data = read_json("products.json")
-        print(data)
-    except FileNotFoundError:
-        print("File not found!")
+    data = read_json_file("users.json")
+    print(data)
 
     # Test writing JSON
-    write_json("output.json", {"status": "ok"})
+    write_json_file("output.json", {"status": "ok"})
 
     # Random bug
     for i in range(5):

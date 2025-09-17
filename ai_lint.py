@@ -20,7 +20,7 @@ def detect_lint_endpoint():
 
     # 2️⃣ GitHub Actions
     if os.getenv("GITHUB_ACTIONS") == "true":
-        return "http://localhost:11434/lint"
+        return "http://192.168.0.103:11434/lint"
 
     # 3️⃣ GitLab CI
     if os.getenv("GITLAB_CI") == "true":
