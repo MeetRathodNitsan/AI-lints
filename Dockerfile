@@ -8,9 +8,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     libgomp1 \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Ollama
+# Install Ollama CLI
 RUN curl -fsSL https://ollama.com/download | bash
 
 # Copy Python requirements
@@ -27,7 +28,8 @@ RUN ollama pull qwen2.5:7b-instruct-q4_k_m
 # Expose FastAPI port
 EXPOSE 8000
 
-# Start Ollama server in background, then start FastAPI
+# Start Ollama server in background and then start FastAPI
+# sleep 5 ensures Ollama server is ready before FastAPI
 CMD ollama serve & \
     sleep 5 && \
     uvicorn main:app --host 0.0.0.0 --port 8000

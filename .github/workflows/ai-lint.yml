@@ -14,37 +14,29 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
-
-    - name: Install dependencies
+    - name: Build Docker container
       run: |
-        python -m venv .venv
-        .venv/bin/pip install --upgrade pip
-        .venv/bin/pip install -r requirements.txt
-        .venv/bin/pip install requests fastapi uvicorn
+        docker build -t ai-lint:latest .
 
-    - name: Start AI Lint Server
+    - name: Run container and fix files in-place
       run: |
-        nohup .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 &
-        sleep 5
+        # Run ai_lint.py which will overwrite the buggy files with fixed code
+        docker run --rm -v $GITHUB_WORKSPACE:/app ai-lint:latest python ai_lint.py
 
-    - name: Run AI Lint
+    - name: Show changes
       run: |
-        .venv/bin/python ai_lint.py > lint_results.txt
+        echo "=== Git diff after AI Lint ==="
+        git --no-pager diff
 
-    - name: Check Lint Results
+    - name: Commit and push fixes (optional)
+      if: github.event_name == 'push' || github.event_name == 'pull_request'
       run: |
-        echo "=== AI Lint Results ==="
-        cat lint_results.txt
-
-        if grep -q "BUG" lint_results.txt; then
-          echo "❌ Bugs found. Blocking pipeline."
-          exit 1
-        elif grep -q "SUGGESTION" lint_results.txt; then
-          echo "⚠️ Suggestions found. Please review."
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add .
+        if ! git diff --cached --quiet; then
+          git commit -m "AI Lint: automatically fixed code"
+          git push
         else
-          echo "✅ No issues. Proceeding..."
+          echo "✅ No changes detected after AI lint."
         fi
