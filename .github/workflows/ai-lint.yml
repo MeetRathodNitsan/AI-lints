@@ -1,9 +1,9 @@
 name: AI Code Lint
 
 on:
-  pull_request:
-    branches: [ "master" ]
   push:
+    branches: [ "master" ]
+  pull_request:
     branches: [ "master" ]
 
 jobs:
@@ -14,41 +14,23 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
-
-    - name: Install dependencies
-      run: |
-        python -m venv .venv
-        .venv/bin/pip install --upgrade pip
-        .venv/bin/pip install -r requirements.txt
-
     - name: Build Docker container
       run: docker build -t ai-lint:latest .
 
-    - name: Run Docker container and execute AI Lint
-      env:
-        # GitHub runners cannot run Ollama, so Lint server must be external or mocked
-        LINT_ENDPOINT: "http://localhost:11434/lint"
+    - name: Run container and execute lint
       run: |
-        docker run --rm --network=host \
-          -v ${{ github.workspace }}:/app \
-          -w /app \
-          -e LINT_ENDPOINT=$LINT_ENDPOINT \
-          ai-lint:latest > lint_results.txt
+        docker run --rm -v ${{ github.workspace }}:/app ai-lint:latest python ai_lint.py > lint_results.txt
 
     - name: Check Lint Results
       run: |
         echo "=== AI Lint Results ==="
         cat lint_results.txt
 
-        if grep -q "✅ BUG" lint_results.txt || grep -q "❌ BUG" lint_results.txt; then
-        echo "❌ Bugs found. Blocking pipeline."
-        exit 1
-        elif grep -q "⚠️ SUGGESTION" lint_results.txt; then
-        echo "⚠️ Suggestions found. Please review."
+        if grep -q "BUG" lint_results.txt; then
+          echo "❌ Bugs found. Blocking pipeline."
+          exit 1
+        elif grep -q "SUGGESTION" lint_results.txt; then
+          echo "⚠️ Suggestions found. Please review."
         else
-        echo "✅ No issues. Proceeding..."
+          echo "✅ No issues. Proceeding..."
         fi
