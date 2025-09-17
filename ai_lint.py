@@ -130,12 +130,12 @@ def main():
 
     if os.getenv("GITHUB_ACTIONS") == "true":
         # Example: in real usage, you can get PR changed files
-        files_to_lint = ["./bug.js"]
+        files_to_lint = ["./buggy_main.py"]
     elif os.getenv("GITLAB_CI") == "true":
-        files_to_lint = ["./bug.js"]
+        files_to_lint = ["./buggy_main.py"]
     else:
         # Local testing
-        files_to_lint = ["./bug.js"]
+        files_to_lint = ["./buggy_main.py"]
 
     print(f"[DEBUG] Files to lint: {files_to_lint}")
 
