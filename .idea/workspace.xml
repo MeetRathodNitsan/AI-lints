@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="767208ad-f709-4b21-8a1d-c817d19f6498" name="Changes" comment="" />
+    <list default="true" id="767208ad-f709-4b21-8a1d-c817d19f6498" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/buggy_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/buggy_main.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -91,7 +93,7 @@
       <workItem from="1758015592052" duration="1782000" />
       <workItem from="1758017385996" duration="1000" />
       <workItem from="1758017402057" duration="11655000" />
-      <workItem from="1758087830374" duration="4912000" />
+      <workItem from="1758087830374" duration="5001000" />
     </task>
     <servers />
   </component>
