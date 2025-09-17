@@ -2,9 +2,9 @@ name: AI Code Lint
 
 on:
   pull_request:
-    branches: ["master"]
+    branches: [ "master" ]
   push:
-    branches: ["master"]
+    branches: [ "master" ]
 
 jobs:
   ai-lint:
@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # fetch full history for diff
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -26,42 +28,25 @@ jobs:
           .venv/bin/pip install -r requirements.txt
           .venv/bin/pip install requests fastapi uvicorn
 
-      - name: Detect changed files
-        id: changed_files
+      - name: Get changed Python files
+        id: files
         run: |
-          echo "Detecting changed files..."
-          # Get PR or push changed files (Python/JS only)
-          FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} \
-                   | grep -E '\.py$|\.js$|\.ts$|\.java$' || true)
-          echo "files=$FILES" >> $GITHUB_OUTPUT
-
-      - name: Start AI Lint Server
-        run: |
-          nohup .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 &
-          sleep 5
+          echo "CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.py$' || true)" >> $GITHUB_ENV
 
       - name: Run AI Lint
+        if: env.CHANGED_FILES != ''
         run: |
-          echo "[DEBUG] Files to lint: ${{ steps.changed_files.outputs.files }}"
-          if [ -z "${{ steps.changed_files.outputs.files }}" ]; then
-            echo "⚠️ No files to lint. Skipping."
-          else
-            for file in ${{ steps.changed_files.outputs.files }}; do
-              echo "[DEBUG] Linting $file"
-              .venv/bin/python ai_lint.py "$file"
-            done
-          fi
+          echo "[DEBUG] Files to lint: $CHANGED_FILES"
+          for f in $CHANGED_FILES; do
+            .venv/bin/python ai_lint.py "$f"
+          done
 
-      - name: Check Lint Results
+      - name: Check for unstaged changes (optional)
         run: |
-          echo "=== AI Lint Results ==="
-          cat lint_results.txt || true
-
-          if grep -q "BUG" lint_results.txt; then
-            echo "❌ Bugs found. Blocking pipeline."
+          if [[ -n $(git diff) ]]; then
+            echo "❌ Files were fixed automatically. Please commit the changes."
+            git diff
             exit 1
-          elif grep -q "SUGGESTION" lint_results.txt; then
-            echo "⚠️ Suggestions found. Please review."
           else
-            echo "✅ No issues. Proceeding..."
+            echo "✅ All files already clean."
           fi
