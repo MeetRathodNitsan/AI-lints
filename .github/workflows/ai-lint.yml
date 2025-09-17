@@ -14,29 +14,41 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m venv .venv
+        .venv/bin/pip install --upgrade pip
+        .venv/bin/pip install -r requirements.txt
+
     - name: Build Docker container
-      run: |
-        docker build -t ai-lint:latest .
+      run: docker build -t ai-lint:latest .
 
-    - name: Run container and fix files in-place
+    - name: Run Docker container and execute AI Lint
+      env:
+        # GitHub runners cannot run Ollama, so Lint server must be external or mocked
+        LINT_ENDPOINT: "http://localhost:11434/lint"
       run: |
-        # Run ai_lint.py which will overwrite the buggy files with fixed code
-        docker run --rm -v $GITHUB_WORKSPACE:/app ai-lint:latest python ai_lint.py
+        docker run --rm --network=host \
+          -v ${{ github.workspace }}:/app \
+          -w /app \
+          -e LINT_ENDPOINT=$LINT_ENDPOINT \
+          ai-lint:latest > lint_results.txt
 
-    - name: Show changes
+    - name: Check Lint Results
       run: |
-        echo "=== Git diff after AI Lint ==="
-        git --no-pager diff
+        echo "=== AI Lint Results ==="
+        cat lint_results.txt
 
-    - name: Commit and push fixes (optional)
-      if: github.event_name == 'push' || github.event_name == 'pull_request'
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add .
-        if ! git diff --cached --quiet; then
-          git commit -m "AI Lint: automatically fixed code"
-          git push
+        if grep -q "BUG" lint_results.txt; then
+          echo "❌ Bugs found. Blocking pipeline."
+          exit 1
+        elif grep -q "SUGGESTION" lint_results.txt; then
+          echo "⚠️ Suggestions found. Please review."
         else
-          echo "✅ No changes detected after AI lint."
+          echo "✅ No issues. Proceeding..."
         fi

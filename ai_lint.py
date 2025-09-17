@@ -1,10 +1,47 @@
 import os
 import requests
-import subprocess
 
-LINT_ENDPOINT = "http://localhost:8000/lint"
+# ============================
+# Automatic endpoint detection
+# ============================
+def detect_lint_endpoint():
+    """
+    Determines the correct Lint server endpoint based on environment.
+    Priority:
+    1. Environment variable LINT_ENDPOINT (manual override)
+    2. GitHub/GitLab CI → localhost (assume external server or mock)
+    3. Docker on Mac/Windows → host.docker.internal
+    4. Local Linux → localhost
+    """
+    # 1️⃣ Manual override
+    endpoint = os.getenv("LINT_ENDPOINT")
+    if endpoint:
+        return endpoint
 
-# Mapping of file extensions to languages and their comment symbols
+    # 2️⃣ GitHub Actions
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        return "http://localhost:11434/lint"
+
+    # 3️⃣ GitLab CI
+    if os.getenv("GITLAB_CI") == "true":
+        return "http://localhost:11434/lint"
+
+    # 4️⃣ Docker macOS/Windows
+    if os.getenv("DOCKER") == "true" or os.path.exists("/.dockerenv"):
+        if os.name == "nt" or os.uname().sysname == "Darwin":
+            return "http://host.docker.internal:11434/lint"
+
+    # 5️⃣ Default local Linux
+    return "http://localhost:11434/lint"
+
+
+LINT_ENDPOINT = detect_lint_endpoint()
+print(f"[DEBUG] Using Lint endpoint: {LINT_ENDPOINT}")
+
+# ============================
+# Helper functions
+# ============================
+
 EXT_LANGUAGE_MAP = {
     ".py": ("Python", "#"),
     ".js": ("JavaScript", "//"),
@@ -28,25 +65,21 @@ EXT_LANGUAGE_MAP = {
     ".css": ("CSS", "/* */"),
 }
 
-def get_all_files():
-    files = []
-    for root, _, filenames in os.walk("."):
-        for f in filenames:
-            path = os.path.join(root, f)
-            files.append(path)
-    return files
 
 def detect_language(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     return EXT_LANGUAGE_MAP.get(ext, ("Text", "#"))
 
+
 def read_file(file_path):
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
 
+
 def overwrite_file(file_path, content):
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content + "\n")
+
 
 def lint_file(file_path, code):
     language, comment_symbol = detect_language(file_path)
@@ -70,47 +103,39 @@ Code:
         response = requests.post(LINT_ENDPOINT, json={"diff": prompt}, timeout=120)
         response.raise_for_status()
         result = response.text.strip()
-        # Clean any leftover markdown if AI returned it
+        # Clean leftover markdown if AI returned it
         for mark in ["```", "```javascript", "```python"]:
             result = result.replace(mark, "")
         return result.strip()
     except requests.exceptions.RequestException as e:
         return f"{comment_symbol} Error linting {file_path}: {e}"
 
-def get_changed_files():
-    """
-    # -----------------------------
-    # GitHub/GitLab CI usage:
-    # This function detects changed files in the last commit (or merge request) using Git.
-    # Uncomment this when running in GitLab/GitHub CI.
-    # -----------------------------
-    """
-    try:
-        # Get list of changed files from last commit
-        diff_output = subprocess.check_output(
-            ["git", "diff", "--name-only", "HEAD~1"]
-        ).decode()
-        changed_files = [f.strip() for f in diff_output.splitlines()
-                         if os.path.splitext(f)[1].lower() in EXT_LANGUAGE_MAP]
-        return changed_files
-    except Exception as e:
-        print(f"[DEBUG] Git diff failed: {e}")
-        return []
+
+def get_all_files():
+    files = []
+    for root, _, filenames in os.walk("."):
+        for f in filenames:
+            path = os.path.join(root, f)
+            files.append(path)
+    return files
+
 
 def main():
     print("[DEBUG] Starting AI linting process...")
 
-    # -----------------------------
-    # Local testing: specify files manually
-    files_to_lint = ["./buggy_main.py"]
-    # -----------------------------
+    # ======================
+    # GitHub/GitLab CI: only check changed files
+    # ======================
+    files_to_lint = []
 
-    # -----------------------------
-    # GitHub/GitLab CI usage:
-    # Uncomment the following lines to automatically lint changed files on push
-    # changed_files = get_changed_files()
-    # files_to_lint = changed_files
-    # -----------------------------
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        # Example: in real usage, you can get PR changed files
+        files_to_lint = ["./bug.js"]
+    elif os.getenv("GITLAB_CI") == "true":
+        files_to_lint = ["./bug.js"]
+    else:
+        # Local testing
+        files_to_lint = ["./bug.js"]
 
     print(f"[DEBUG] Files to lint: {files_to_lint}")
 
@@ -124,10 +149,9 @@ def main():
 
         code = read_file(file_path)
         result = lint_file(file_path, code)
-
-        # Overwrite the original file with fixed code + inline comments + final explanation section
         overwrite_file(file_path, result)
         print(f"✅ Lint results applied to {file_path}")
+
 
 if __name__ == "__main__":
     main()
