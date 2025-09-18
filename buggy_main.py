@@ -1,19 +1,18 @@
-def calculate_average(numbers):
+def find_largest_number(numbers):
     """
-    Calculates the average of a list of numbers.
-    The bug here is a division by zero error if the list is empty.
+    Finds the largest number in a list.
+    The bug: It fails if all numbers in the list are negative.
     """
-    total = sum(numbers)
-    count = len(numbers)
-    average = total / count
-    return average
+    largest = 0  # Buggy initialization
+    for number in numbers:
+        if number > largest:
+            largest = number
+    return largest
 
 # This will work as expected
-data_points = [10, 20, 30, 40]
-average_value = calculate_average(data_points)
-print(f"The average is: {average_value}")
+positive_numbers = [10, 5, 20, 15]
+print(f"The largest number is: {find_largest_number(positive_numbers)}") # Output: 20
 
-# This will cause a ZeroDivisionError
-empty_list = []
-average_of_empty = calculate_average(empty_list)
-print(f"The average of an empty list is: {average_of_empty}")
+# This will expose the bug
+negative_numbers = [-10, -5, -20, -1]
+print(f"The largest number is: {find_largest_number(negative_numbers)}") # Output: 0 (Incorrect)
