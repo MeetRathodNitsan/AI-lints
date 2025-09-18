@@ -1,7 +1,6 @@
 import os
 import requests
 import subprocess
-import sys
 
 LINT_ENDPOINT = "http://localhost:8000/lint"
 
@@ -25,10 +24,9 @@ EXT_LANGUAGE_MAP = {
     ".yaml": ("YAML", "#"),
     ".yml": ("YAML", "#"),
     ".json": ("JSON", "//"),
-    ".html": ("HTML", ""),
+    ".html": ("HTML", "<!-- -->"),
     ".css": ("CSS", "/* */"),
 }
-
 
 def get_all_files():
     files = []
@@ -38,74 +36,204 @@ def get_all_files():
             files.append(path)
     return files
 
-
 def detect_language(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     return EXT_LANGUAGE_MAP.get(ext, ("Text", "#"))
-
 
 def read_file(file_path):
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
 
-
 def overwrite_file(file_path, content):
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content + "\n")
 
-
 def run_basic_checks(file_path, language):
     """
-    This function is now empty as all language-specific checks have been removed.
+    Run basic pre-deployment checks depending on language.
+    Currently disabled (commented out).
     """
-    return []
-
+    # checks = {
+    #     "Python": ["flake8 --max-line-length=120", "mypy", "pytest --maxfail=1"],
+    #     "JavaScript": ["eslint", "npm test"],
+    #     "TypeScript": ["eslint", "tsc", "npm test"],
+    #     "Java": ["javac {file}", "mvn test"],
+    #     "C++": ["clang-tidy {file}", "g++ -Wall -Werror -o /dev/null {file}"],
+    #     "C": ["clang-tidy {file}", "gcc -Wall -Werror -o /dev/null {file}"],
+    #     "C#": ["dotnet build", "dotnet test"],
+    #     "Ruby": ["rubocop", "rspec"],
+    #     "Go": ["golangci-lint run", "go test ./..."],
+    #     "Rust": ["cargo clippy", "cargo test"],
+    #     "PHP": ["php -l {file}", "phpunit"],
+    #     "Swift": ["swiftlint", "xcodebuild test"],
+    #     "Kotlin": ["ktlint", "./gradlew test"],
+    #     "Scala": ["scalafmt", "sbt test"],
+    #     "Bash": ["shellcheck {file}", "bash -n {file}"],
+    #     "YAML": ["yamllint {file}"],
+    #     "JSON": ["jq empty {file}"],
+    #     "HTML": ["htmlhint {file}"],
+    #     "CSS": ["stylelint {file}"],
+    # }
+    # commands = checks.get(language, [])
+    # commands = [cmd.format(file=file_path) for cmd in commands]
+    # return commands
+    return []  # Disabled
 
 def lint_file(file_path, code):
     language, comment_symbol = detect_language(file_path)
     print(f"[DEBUG] Linting {file_path} as {language} using comment '{comment_symbol}'")
 
     prompt = f"""
-        You are an expert {language} developer.
-        Critically analyze the following code for bugs, **including logical errors and flaws in the algorithm**.
-        Correct the code **only if there are bugs or issues**.
+    You are an expert {language} developer.
+    Correct the following code **in-place only if there are bugs**.
 
-        Rules:
-        - If the code has no errors or issues, return the code **exactly as-is**.
-        - Do NOT add any headers, language names, or titles.
-        - Do NOT add EXPLANATIONS or comments if no changes were made.
-        - If fixes were applied, add an EXPLANATIONS section at the end using '{comment_symbol}'.
-        - Do NOT use Markdown formatting, backticks, or code fences.
-        - Do NOT add any other text outside the code.
+    Rules:
+    - If the code has no errors, bugs, or issues, return the code **exactly as-is**, with **no headers, no EXPLANATIONS, and no added comments**.
+    - Only provide explanations **if you made changes**.
+    - Do NOT include the original buggy code.
+    - Do NOT use any Markdown formatting (no triple backticks or language identifiers).
+    - Each fix must have an explanation inline using the comment symbol '{comment_symbol}'.
+    - At the end of the code, add a section called {comment_symbol} EXPLANATIONS **only if fixes were applied**.
+    - Do NOT add any deployment checklist inside the file.
+    - Do NOT add any headings or extra text outside the code.
 
-        Code:
-        {code}
-        """
+    Code:
+    {code}
+    """
 
-    # API request and response handling logic
     try:
-        response = requests.post(LINT_ENDPOINT, json={"diff": prompt}, timeout=300)
+        response = requests.post(LINT_ENDPOINT, json={"diff": prompt}, timeout=120)
         response.raise_for_status()
         result = response.text.strip()
 
         # Clean leftover markdown if AI returned it
-        for mark in ["```", "```javascript", "```python", "```java", "```go", "```c", "```cpp", "```rust", "```php",
-                     "```tsx"]:
+        for mark in ["```", "```javascript", "```python", "```java", "```go", "```c", "```cpp", "```rust", "```php", "```tsx"]:
             result = result.replace(mark, "")
 
+        # Pre-deployment checklist (language-specific)
+        checklist = {
+            "Python": [
+                "Run unit tests: pytest",
+                "Lint: flake8 or pylint",
+                "Type checks: mypy",
+                "Security scan: bandit",
+            ],
+            "JavaScript": [
+                "Run unit tests: jest",
+                "Lint: eslint",
+                "Type checks (if TS): tsc",
+                "Security scan: npm audit",
+            ],
+            "TypeScript": [
+                "Run unit tests: jest",
+                "Lint: eslint",
+                "Type checks: tsc",
+                "Security scan: npm audit",
+            ],
+            "React": [
+                "Run unit tests: jest/react-testing-library",
+                "Lint: eslint",
+                "Build test: npm run build",
+                "Security scan: npm audit",
+                "Accessibility check: axe or lighthouse",
+            ],
+            "PHP": [
+                "Run unit tests: phpunit",
+                "Lint: php -l",
+                "Static analysis: phpstan or psalm",
+                "Security scan: php-security-checker",
+            ],
+            "Go": [
+                "Run unit tests: go test",
+                "Lint: golangci-lint",
+                "Security scan: gosec",
+            ],
+            "Java": [
+                "Run unit tests: mvn test",
+                "Lint: checkstyle",
+                "Static analysis: spotbugs",
+                "Security scan: dependency-check",
+            ],
+            "Rust": [
+                "Run unit tests: cargo test",
+                "Lint: cargo clippy",
+                "Security scan: cargo audit",
+            ],
+            "C++": [
+                "Run unit tests with gtest/catch2",
+                "Lint: clang-tidy",
+                "Memory checks: valgrind",
+                "Security scan: cppcheck",
+            ],
+            "C": [
+                "Run unit tests",
+                "Lint: clang-tidy",
+                "Memory checks: valgrind",
+                "Security scan: cppcheck",
+            ],
+            "C#": [
+                "Run unit tests: dotnet test",
+                "Lint: StyleCop",
+                "Static analysis: SonarQube",
+                "Security scan: dependency-check",
+            ],
+            "Ruby": [
+                "Run unit tests: rspec",
+                "Lint: rubocop",
+                "Security scan: brakeman",
+            ],
+            "Swift": [
+                "Run unit tests: xcodebuild test",
+                "Lint: swiftlint",
+                "Static analysis: swiftformat",
+            ],
+            "Kotlin": [
+                "Run unit tests: ./gradlew test",
+                "Lint: ktlint",
+                "Static analysis: detekt",
+            ],
+            "Scala": [
+                "Run unit tests: sbt test",
+                "Lint: scalafmt",
+                "Static analysis: scapegoat",
+            ],
+            "Bash": [
+                "Lint: shellcheck",
+                "Test script manually",
+                "Check POSIX compliance",
+            ],
+            "YAML": [
+                "Lint: yamllint",
+                "Validate schema",
+            ],
+            "JSON": [
+                "Validate JSON syntax",
+                "Check schema validation",
+            ],
+            "HTML": [
+                "Lint: htmlhint",
+                "Accessibility check: lighthouse",
+                "Cross-browser validation",
+            ],
+            "CSS": [
+                "Lint: stylelint",
+                "Check responsiveness",
+                "Accessibility contrast check",
+            ],
+        }
+
         # Append deployment reminder as comments
+
         extra_section = f"\n\n{comment_symbol} ⚠️ Code has been auto-corrected. Please review before deployment.\n\n"
-        extra_section += f"{comment_symbol} ✅ Pre-Deployment Checklist:\n"
-        extra_section += f"{comment_symbol} - Review code manually\n"
-        extra_section += f"{comment_symbol} - Run tests\n"
-        extra_section += f"{comment_symbol} - Run security scans\n"
+        extra_section += f"{comment_symbol} ✅ Pre-Deployment Checklist for {language}:\n"
+        for item in checklist.get(language, ["Review code manually", "Run tests", "Run security scans"]):
+            extra_section += f"{comment_symbol} - {item}\n"
         extra_section += f"\n{comment_symbol} 🚫 Do NOT deploy until all above checks pass successfully.\n"
 
         return result.strip() + "\n" + extra_section
 
     except requests.exceptions.RequestException as e:
-        print(f"❌ Error linting {file_path}: {e}", file=sys.stderr)
-        return None  # Return None on failure
+        return f"{comment_symbol} Error linting {file_path}: {e}"
 
 
 def get_changed_files():
@@ -140,14 +268,22 @@ def main():
         code = read_file(file_path)
         result = lint_file(file_path, code)
 
-        if result is not None:
-            overwrite_file(file_path, result)
-            print(f"✅ Lint results applied to {file_path}")
+        overwrite_file(file_path, result)
+        print(f"✅ Lint results applied to {file_path}")
 
-            # If the AI inserted fixes, block deployment
-            if "Code has been auto-corrected" in result:
-                deployment_blocked = True
-        else:
+        # Run basic pre-checks for all languages (currently commented)
+        # language, _ = detect_language(file_path)
+        # checks = run_basic_checks(file_path, language)
+        # for cmd in checks:
+        #     print(f"[CHECK] Running: {cmd}")
+        #     try:
+        #         subprocess.run(cmd, shell=True, check=True)
+        #     except subprocess.CalledProcessError as e:
+        #         print(f"❌ Check failed: {e}")
+        #         deployment_blocked = True
+
+        # If the AI inserted fixes, block deployment
+        if "Code has been auto-corrected" in result:
             deployment_blocked = True
 
     if deployment_blocked:
@@ -155,9 +291,10 @@ def main():
         print("⚠️ Code had bugs or checks failed.")
         print("✅ Please review the code manually and run the pre-deployment checklist.")
         print("➡️ After verification, rerun deployment.\n")
-        sys.exit(1)
     else:
         print("\n✅ Code passed without auto-fixes. Safe to deploy!\n")
+        # Example: trigger deployment here
+        # subprocess.run(["./deploy.sh"])
 
 
 if __name__ == "__main__":

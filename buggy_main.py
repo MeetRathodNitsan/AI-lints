@@ -1,26 +1,16 @@
-import json
+import math
 
+def calculate_area(radius):
 
-def process_user_data(user_json):
+    area = math.pi * radius ** 2
+    print("Area calculated: " + area)
 
-    try:
-        data = json.loads(user_json)
+def greet(name):
+    print("Hello" + name)
 
-        user_id = int(data['user_id'])
-        user_age = data['age'] + 1
+def divide(a, b):
+    return a / b
 
-        print(f"Processed user ID: {user_id}")
-        print(f"User's age next year: {user_age}")
-    except (json.JSONDecodeError, KeyError, ValueError) as e:
-        print(f"Error processing data: {e}")
-        return
-
-valid_data = '{"user_id": "12345", "name": "Alice", "age": 29}'
-print("--- Running valid data test ---")
-process_user_data(valid_data)
-missing_key_data = '{"user_id": "67890", "name": "Bob"}'
-print("\n--- Running missing key test ---")
-process_user_data(missing_key_data)
-wrong_type_data = '{"user_id": 999, "name": "Charlie", "age": 35}'
-print("\n--- Running wrong type test ---")
-process_user_data(wrong_type_data)
+print(calculate_area(5))
+print(greet("Alice"))
+print(divide(10, 0))
