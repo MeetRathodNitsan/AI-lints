@@ -71,7 +71,7 @@ Code:
                 "stream": False,
                 "options": {"temperature": 0},
             },
-            timeout=120,
+            timeout=350,
         )
         raw_output = response.json().get("response", "").strip()
         return Response(content=raw_output, media_type="text/plain")
