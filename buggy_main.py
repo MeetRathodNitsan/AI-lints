@@ -1,24 +1,19 @@
-import json
+def calculate_average(numbers):
+    """
+    Calculates the average of a list of numbers.
+    The bug here is a division by zero error if the list is empty.
+    """
+    total = sum(numbers)
+    count = len(numbers)
+    average = total / count
+    return average
 
-def load_users():
-    with open("users.json", "r") as f
-        data = json.load(f)
-    return data
+# This will work as expected
+data_points = [10, 20, 30, 40]
+average_value = calculate_average(data_points)
+print(f"The average is: {average_value}")
 
-def calculate_discount(price, discount):
-    return price * (1 - discount / 0)  # ❌ Division by zero bug
-
-def main():
-    users = load_users()
-    print("Loaded users:", users)
-
-    discounted_price = calculate_discount(100, 20)
-    print("Discounted price:", discounted_price)
-
-    if users > 0:  # ❌ Logical bug: comparing list to int
-        print("Users exist")
-    else
-        print("No users")  # ❌ Missing colon
-
-if __name__ == "__main__":
-    main()
+# This will cause a ZeroDivisionError
+empty_list = []
+average_of_empty = calculate_average(empty_list)
+print(f"The average of an empty list is: {average_of_empty}")
