@@ -25,10 +25,10 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/pip install --upgrade pip
-          .venv/bin/pip install -r requirements.txt
+          .venv/bin/pip install -r requirements.txt || true
           .venv/bin/pip install requests fastapi uvicorn flake8 mypy bandit pytest
 
-      - name: Get changed Python files
+      - name: Get changed code files
         id: files
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
@@ -37,8 +37,15 @@ jobs:
             ALL_CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
           fi
 
-          # Only include .py files
-          CODE_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(py|js|ts|php|html|c|kotlin|react)$')
+          echo "[DEBUG] Changed files:"
+          echo "$ALL_CHANGED"
+
+          # Match multiple file types
+          CODE_FILES=$(echo "$ALL_CHANGED" | grep -E '\.(py|js|ts|php|html|c|cpp|cs|rb|go|rs|swift|kt|scala|sh|yaml|yml|json|css|react)$' || true)
+
+          echo "[DEBUG] Code files after filter:"
+          echo "$CODE_FILES"
+
           echo "CHANGED_FILES=$CODE_FILES" >> $GITHUB_ENV
 
       - name: Start AI Linting Server
