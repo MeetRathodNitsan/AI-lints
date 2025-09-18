@@ -66,21 +66,21 @@ def lint_file(file_path, code):
     print(f"[DEBUG] Linting {file_path} as {language} using comment '{comment_symbol}'")
 
     prompt = f"""
-    You are an expert {language} developer.
-    Critically analyze the following code for bugs, including logical errors and flaws in the algorithm.
-    Correct the code **only if there are bugs or issues**.
+        You are an expert {language} developer.
+        Critically analyze the following code for bugs, **including logical errors and flaws in the algorithm**.
+        Correct the code **only if there are bugs or issues**.
 
-    Rules:
-    - If the code has no errors or issues, return the code **exactly as-is**.
-    - Do NOT add any headers, language names, or titles.
-    - Do NOT add EXPLANATIONS or comments if no changes were made.
-    - If fixes were applied, add an EXPLANATIONS section at the end using '{comment_symbol}'.
-    - Do NOT use Markdown formatting, backticks, or code fences.
-    - Do NOT add any other text outside the code.
+        Rules:
+        - If the code has no errors or issues, return the code **exactly as-is**.
+        - Do NOT add any headers, language names, or titles.
+        - Do NOT add EXPLANATIONS or comments if no changes were made.
+        - If fixes were applied, add an EXPLANATIONS section at the end using '{comment_symbol}'.
+        - Do NOT use Markdown formatting, backticks, or code fences.
+        - Do NOT add any other text outside the code.
 
-    Code:
-    {code}
-    """
+        Code:
+        {code}
+        """
 
     # API request and response handling logic
     try:

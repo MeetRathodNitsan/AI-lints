@@ -1,18 +1,26 @@
-import time
-
-def find_item_with_bug(items, target):
-
-    i = 0
-
-    while i < len(items):
-        if items[i] == target:
-            return f"Found '{target}' at index {i}"
-
-    return f"Could not find '{target}'"
-
-test_list = ["apple", "banana", "cherry", "date"]
-
-print(find_item_with_bug(test_list, "banana"))
+import json
 
 
-print(find_item_with_bug(test_list, "grape"))
+def process_user_data(user_json):
+
+    try:
+        data = json.loads(user_json)
+
+        user_id = int(data['user_id'])
+        user_age = data['age'] + 1
+
+        print(f"Processed user ID: {user_id}")
+        print(f"User's age next year: {user_age}")
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        print(f"Error processing data: {e}")
+        return
+
+valid_data = '{"user_id": "12345", "name": "Alice", "age": 29}'
+print("--- Running valid data test ---")
+process_user_data(valid_data)
+missing_key_data = '{"user_id": "67890", "name": "Bob"}'
+print("\n--- Running missing key test ---")
+process_user_data(missing_key_data)
+wrong_type_data = '{"user_id": 999, "name": "Charlie", "age": 35}'
+print("\n--- Running wrong type test ---")
+process_user_data(wrong_type_data)
