@@ -77,3 +77,4 @@ jobs:
             exit 1
           else
             echo "✅ All files already clean."
+          fi
