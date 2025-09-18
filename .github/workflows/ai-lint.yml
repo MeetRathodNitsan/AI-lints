@@ -46,7 +46,11 @@ jobs:
           echo "[DEBUG] Code files after filter:"
           echo "$CODE_FILES"
 
-          echo "CHANGED_FILES=$CODE_FILES" >> $GITHUB_ENV
+          # Convert to space-separated single line
+          CODE_FILES_LINE=$(echo "$CODE_FILES" | xargs)
+
+          echo "CHANGED_FILES=$CODE_FILES_LINE" >> $GITHUB_ENV
+      
 
       - name: Start AI Linting Server
         run: |
