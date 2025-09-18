@@ -1,16 +1,18 @@
-def sum_numbers_with_bug(numbers):
+import time
 
-    total = 0
+def find_item_with_bug(items, target):
 
-    for i in range(len(numbers) - 1):
-        total += numbers[i]
-    return total
+    i = 0
 
-test_list = [10, 20, 30, 40, 50]
+    while i < len(items):
+        if items[i] == target:
+            return f"Found '{target}' at index {i}"
 
-buggy_result = sum_numbers_with_bug(test_list)
-print(f"List: {test_list}")
-print(f"Calculated sum (buggy): {buggy_result}")
+    return f"Could not find '{target}'"
 
-correct_result = sum(test_list)
-print(f"Correct sum: {correct_result}")
+test_list = ["apple", "banana", "cherry", "date"]
+
+print(find_item_with_bug(test_list, "banana"))
+
+
+print(find_item_with_bug(test_list, "grape"))
