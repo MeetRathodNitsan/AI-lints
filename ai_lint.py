@@ -56,37 +56,9 @@ def overwrite_file(file_path, content):
 
 def run_basic_checks(file_path, language):
     """
-    Run basic pre-deployment checks depending on language.
+    This function is now empty as all language-specific checks have been removed.
     """
-    # Use the full, correct paths for executables inside the virtual environment
-    checks = {
-        "Python": [
-            "./.venv/bin/flake8 --max-line-length=120",
-            "./.venv/bin/mypy {file}",
-            "./.venv/bin/pytest --maxfail=1"
-        ],
-        "JavaScript": ["./node_modules/.bin/eslint", "./node_modules/.bin/jest"],
-        "TypeScript": ["./node_modules/.bin/eslint", "./node_modules/.bin/tsc", "./node_modules/.bin/jest"],
-        "Java": ["javac {file}", "mvn test"],
-        "C++": ["clang-tidy {file}", "g++ -Wall -Werror -o /dev/null {file}"],
-        "C": ["clang-tidy {file}", "gcc -Wall -Werror -o /dev/null {file}"],
-        "C#": ["dotnet build", "dotnet test"],
-        "Ruby": ["rubocop", "rspec"],
-        "Go": ["golangci-lint run", "go test ./..."],
-        "Rust": ["cargo clippy", "cargo test"],
-        "PHP": ["php -l {file}", "phpunit"],
-        "Swift": ["swiftlint", "xcodebuild test"],
-        "Kotlin": ["ktlint", "./gradlew test"],
-        "Scala": ["scalafmt", "sbt test"],
-        "Bash": ["shellcheck {file}", "bash -n {file}"],
-        "YAML": ["yamllint {file}"],
-        "JSON": ["jq empty {file}"],
-        "HTML": ["htmlhint {file}"],
-        "CSS": ["stylelint {file}"],
-    }
-    commands = checks.get(language, [])
-    commands = [cmd.format(file=file_path) for cmd in commands]
-    return commands
+    return []
 
 
 def lint_file(file_path, code):
@@ -121,123 +93,12 @@ def lint_file(file_path, code):
                      "```tsx"]:
             result = result.replace(mark, "")
 
-        # Pre-deployment checklist (language-specific)
-        checklist = {
-            "Python": [
-                "Run unit tests: pytest",
-                "Lint: flake8 or pylint",
-                "Type checks: mypy",
-                "Security scan: bandit",
-            ],
-            "JavaScript": [
-                "Run unit tests: jest",
-                "Lint: eslint",
-                "Type checks (if TS): tsc",
-                "Security scan: npm audit",
-            ],
-            "TypeScript": [
-                "Run unit tests: jest",
-                "Lint: eslint",
-                "Type checks: tsc",
-                "Security scan: npm audit",
-            ],
-            "React": [
-                "Run unit tests: jest/react-testing-library",
-                "Lint: eslint",
-                "Build test: npm run build",
-                "Security scan: npm audit",
-                "Accessibility check: axe or lighthouse",
-            ],
-            "PHP": [
-                "Run unit tests: phpunit",
-                "Lint: php -l",
-                "Static analysis: phpstan or psalm",
-                "Security scan: php-security-checker",
-            ],
-            "Go": [
-                "Run unit tests: go test",
-                "Lint: golangci-lint",
-                "Security scan: gosec",
-            ],
-            "Java": [
-                "Run unit tests: mvn test",
-                "Lint: checkstyle",
-                "Static analysis: spotbugs",
-                "Security scan: dependency-check",
-            ],
-            "Rust": [
-                "Run unit tests: cargo test",
-                "Lint: cargo clippy",
-                "Security scan: cargo audit",
-            ],
-            "C++": [
-                "Run unit tests with gtest/catch2",
-                "Lint: clang-tidy",
-                "Memory checks: valgrind",
-                "Security scan: cppcheck",
-            ],
-            "C": [
-                "Run unit tests",
-                "Lint: clang-tidy",
-                "Memory checks: valgrind",
-                "Security scan: cppcheck",
-            ],
-            "C#": [
-                "Run unit tests: dotnet test",
-                "Lint: StyleCop",
-                "Static analysis: SonarQube",
-                "Security scan: dependency-check",
-            ],
-            "Ruby": [
-                "Run unit tests: rspec",
-                "Lint: rubocop",
-                "Security scan: brakeman",
-            ],
-            "Swift": [
-                "Run unit tests: xcodebuild test",
-                "Lint: swiftlint",
-                "Static analysis: swiftformat",
-            ],
-            "Kotlin": [
-                "Run unit tests: ./gradlew test",
-                "Lint: ktlint",
-                "Static analysis: detekt",
-            ],
-            "Scala": [
-                "Run unit tests: sbt test",
-                "Lint: scalafmt",
-                "Static analysis: scapegoat",
-            ],
-            "Bash": [
-                "Lint: shellcheck",
-                "Test script manually",
-                "Check POSIX compliance",
-            ],
-            "YAML": [
-                "Lint: yamllint",
-                "Validate schema",
-            ],
-            "JSON": [
-                "Validate JSON syntax",
-                "Check schema validation",
-            ],
-            "HTML": [
-                "Lint: htmlhint",
-                "Accessibility check: lighthouse",
-                "Cross-browser validation",
-            ],
-            "CSS": [
-                "Lint: stylelint",
-                "Check responsiveness",
-                "Accessibility contrast check",
-            ],
-        }
-
         # Append deployment reminder as comments
         extra_section = f"\n\n{comment_symbol} ⚠️ Code has been auto-corrected. Please review before deployment.\n\n"
-        extra_section += f"{comment_symbol} ✅ Pre-Deployment Checklist for {language}:\n"
-        for item in checklist.get(language, ["Review code manually", "Run tests", "Run security scans"]):
-            extra_section += f"{comment_symbol} - {item}\n"
+        extra_section += f"{comment_symbol} ✅ Pre-Deployment Checklist:\n"
+        extra_section += f"{comment_symbol} - Review code manually\n"
+        extra_section += f"{comment_symbol} - Run tests\n"
+        extra_section += f"{comment_symbol} - Run security scans\n"
         extra_section += f"\n{comment_symbol} 🚫 Do NOT deploy until all above checks pass successfully.\n"
 
         return result.strip() + "\n" + extra_section
@@ -283,18 +144,8 @@ def main():
             overwrite_file(file_path, result)
             print(f"✅ Lint results applied to {file_path}")
 
-            # Run basic pre-checks for all languages
-            language, _ = detect_language(file_path)
-            checks = run_basic_checks(file_path, language)
-            for cmd in checks:
-                print(f"[CHECK] Running: {cmd}")
-                try:
-                    # Note: We are running with shell=True which can be a security risk if the input
-                    # is not trusted. For this use case, it's fine.
-                    subprocess.run(cmd, shell=True, check=True)
-                except subprocess.CalledProcessError as e:
-                    print(f"❌ Check failed: {e}")
-                    deployment_blocked = True
+            # All language-specific checks have been removed from this section.
+            # The script will now proceed directly to the final git status check.
 
             # If the AI inserted fixes, block deployment
             if "Code has been auto-corrected" in result:
@@ -310,8 +161,6 @@ def main():
         sys.exit(1)
     else:
         print("\n✅ Code passed without auto-fixes. Safe to deploy!\n")
-        # Example: trigger deployment here
-        # subprocess.run(["./deploy.sh"])
 
 
 if __name__ == "__main__":

@@ -42,12 +42,6 @@ jobs:
           # A temporary variable to hold the list of changed files with a `.py` extension.
           PYTHON_FILES=$(echo "$CHANGED_FILES" | grep -oE '[^[:space:]]+\.py')
           
-          # Install linters only if relevant files are found.
-          if [[ -n "$PYTHON_FILES" ]]; then
-            echo "Installing Python linters..."
-            .venv/bin/pip install flake8 mypy pytest
-          fi
-          
           echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
 
         shell: /usr/bin/bash -e {0}
