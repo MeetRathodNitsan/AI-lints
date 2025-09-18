@@ -1,22 +1,22 @@
-def is_palindrome(s):
+def sum_positive_numbers(numbers):
     """
-    Checks if a string is a palindrome.
-    The bug: It fails to correctly handle strings with an odd number of characters.
+    Sums all positive numbers in a list.
+    The bug: it adds a number to the sum even if it's negative.
     """
-    # Create a reversed version of the string
-    reversed_s = s[::-1]
-
-    # Check if the string and its reversed version are equal
-    # This comparison is flawed for odd-length strings
-    return s[:len(s) // 2] == reversed_s[:len(reversed_s) // 2]
-
+    total = 0
+    for number in numbers:
+        if number >= 0:
+            total += number
+        else:
+            total += number  # This is the bug
+    return total
 
 # This will work as expected
-print(f"'racecar' is a palindrome: {is_palindrome('racecar')}")  # Expected: True, Actual: True
+positive_list = [1, 2, 3, 4]
+print(f"Sum of positive numbers: {sum_positive_numbers(positive_list)}")
+# Expected: 10, Actual: 10
 
 # This will fail
-print(f"'madam' is a palindrome: {is_palindrome('madam')}")
-# Expected: True, Actual: False (Incorrect)
-
-# This will also work
-print(f"'level' is a palindrome: {is_palindrome('level')}")  # Expected: True, Actual: True
+mixed_list = [1, -2, 3, -4]
+print(f"Sum of mixed numbers: {sum_positive_numbers(mixed_list)}")
+# Expected: 4, Actual: -2 (Incorrect)

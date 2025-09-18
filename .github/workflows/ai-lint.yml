@@ -21,40 +21,49 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install dependencies
+      - name: Install core Python dependencies
         run: |
           python -m venv .venv
           .venv/bin/pip install --upgrade pip
           .venv/bin/pip install -r requirements.txt
           .venv/bin/pip install requests fastapi uvicorn
 
-      # Step 1: Start the FastAPI server in the background 🚀
-      - name: Start AI Linting Server
+      - name: Get changed files and install relevant linters
+        id: files
         run: |
-          # Replace 'main:app' with the correct module and app name for your FastAPI application.
-          # The '&' runs the process in the background.
-          .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 &
-          # Wait a few seconds to ensure the server is fully started.
-          sleep 5
-
-      - name: Get changed Python files
-        run: |
-          # Get the list of changed files and replace newlines with a single space
-          CHANGED_FILES=$(git diff --name-only b355c8b31d9320f24d70a3e80b4a4e51fdd2d91b e3e3eba601095d7ce58849b78e101d5174474615 | grep '\.py$' | tr '\n' ' ')
-
-          # Check if any files were found before writing to the environment file
-          if [[ -n "$CHANGED_FILES" ]]; then
-            echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
+          # The logic for getting changed files is now more robust
+          # for both push and pull_request events.
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | tr '\n' ' ')
+          else
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | tr '\n' ' ')
           fi
+          
+          # A temporary variable to hold the list of changed files with a `.py` extension.
+          PYTHON_FILES=$(echo "$CHANGED_FILES" | grep -oE '[^[:space:]]+\.py')
+          
+          # Install linters only if relevant files are found.
+          if [[ -n "$PYTHON_FILES" ]]; then
+            echo "Installing Python linters..."
+            .venv/bin/pip install flake8 mypy pytest
+          fi
+          
+          echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
+
         shell: /usr/bin/bash -e {0}
 
+      - name: Start AI Linting Server
+        run: |
+          .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
 
       - name: Run AI Lint
         if: env.CHANGED_FILES != ''
         run: |
           echo "[DEBUG] Files to lint: $CHANGED_FILES"
           for f in $CHANGED_FILES; do
-            # The script should now be able to connect to the server
+            # The script will now be able to find `flake8`, `mypy`, etc.,
+            # because they're installed in the virtual environment.
             .venv/bin/python ai_lint.py "$f"
           done
 
