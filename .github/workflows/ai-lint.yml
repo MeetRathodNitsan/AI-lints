@@ -14,8 +14,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # fetch-depth: 0 is correct, but for pull requests,
-          # you can get a cleaner diff by fetching the base branch as well.
           fetch-depth: 0
 
       - name: Set up Python
@@ -30,35 +28,27 @@ jobs:
           .venv/bin/pip install -r requirements.txt
           .venv/bin/pip install requests fastapi uvicorn
 
-      - name: Get changed Python files (Pull Request)
-        id: pr-files
-        if: github.event_name == 'pull_request'
+      # Step 1: Start the FastAPI server in the background 🚀
+      - name: Start AI Linting Server
         run: |
-          # The correct way to get the diff for a pull request
-          # It compares the head of the branch to the merge-base of the target branch.
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.py$')
-          # To handle files with spaces, we use a different separator for the next step.
-          # We also handle the case where no files are found.
-          if [[ -n "$CHANGED_FILES" ]]; then
-            echo "CHANGED_FILES=${CHANGED_FILES//'\n'/' '}" >> $GITHUB_ENV
-          fi
+          # Replace 'main:app' with the correct module and app name for your FastAPI application.
+          # The '&' runs the process in the background.
+          .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 &
+          # Wait a few seconds to ensure the server is fully started.
+          sleep 5
 
-      - name: Get changed Python files (Push)
-        id: push-files
-        if: github.event_name == 'push'
+      - name: Get changed Python files
+        id: files
         run: |
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.py$')
-          if [[ -n "$CHANGED_FILES" ]]; then
-            echo "CHANGED_FILES=${CHANGED_FILES//'\n'/' '}" >> $GITHUB_ENV
-          fi
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.py$' || true)
+          echo "CHANGED_FILES=${CHANGED_FILES//$'\\n'/' '}" >> $GITHUB_ENV
 
       - name: Run AI Lint
         if: env.CHANGED_FILES != ''
         run: |
           echo "[DEBUG] Files to lint: $CHANGED_FILES"
-          # The for loop is now safer because we replaced newlines with spaces.
           for f in $CHANGED_FILES; do
-            # Using the full path to the ai_lint.py script is a good practice
+            # The script should now be able to connect to the server
             .venv/bin/python ai_lint.py "$f"
           done
 
