@@ -1,6 +1,7 @@
 import os
 import requests
 import subprocess
+import sys
 
 LINT_ENDPOINT = "http://localhost:8000/lint"
 
@@ -24,9 +25,10 @@ EXT_LANGUAGE_MAP = {
     ".yaml": ("YAML", "#"),
     ".yml": ("YAML", "#"),
     ".json": ("JSON", "//"),
-    ".html": ("HTML", "<!-- -->"),
+    ".html": ("HTML", ""),
     ".css": ("CSS", "/* */"),
 }
+
 
 def get_all_files():
     files = []
@@ -36,30 +38,35 @@ def get_all_files():
             files.append(path)
     return files
 
+
 def detect_language(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     return EXT_LANGUAGE_MAP.get(ext, ("Text", "#"))
+
 
 def read_file(file_path):
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
 
+
 def overwrite_file(file_path, content):
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content + "\n")
+
 
 def run_basic_checks(file_path, language):
     """
     Run basic pre-deployment checks depending on language.
     """
+    # Use the full, correct paths for executables inside the virtual environment
     checks = {
         "Python": [
             "./.venv/bin/flake8 --max-line-length=120",
-            "./.venv/bin/mypy",
+            "./.venv/bin/mypy {file}",
             "./.venv/bin/pytest --maxfail=1"
         ],
-        "JavaScript": ["eslint", "npm test"],
-        "TypeScript": ["eslint", "tsc", "npm test"],
+        "JavaScript": ["./node_modules/.bin/eslint", "./node_modules/.bin/jest"],
+        "TypeScript": ["./node_modules/.bin/eslint", "./node_modules/.bin/tsc", "./node_modules/.bin/jest"],
         "Java": ["javac {file}", "mvn test"],
         "C++": ["clang-tidy {file}", "g++ -Wall -Werror -o /dev/null {file}"],
         "C": ["clang-tidy {file}", "gcc -Wall -Werror -o /dev/null {file}"],
@@ -80,6 +87,7 @@ def run_basic_checks(file_path, language):
     commands = checks.get(language, [])
     commands = [cmd.format(file=file_path) for cmd in commands]
     return commands
+
 
 def lint_file(file_path, code):
     language, comment_symbol = detect_language(file_path)
@@ -102,13 +110,15 @@ def lint_file(file_path, code):
     {code}
     """
 
+    # API request and response handling logic
     try:
         response = requests.post(LINT_ENDPOINT, json={"diff": prompt}, timeout=120)
         response.raise_for_status()
         result = response.text.strip()
 
         # Clean leftover markdown if AI returned it
-        for mark in ["```", "```javascript", "```python", "```java", "```go", "```c", "```cpp", "```rust", "```php", "```tsx"]:
+        for mark in ["```", "```javascript", "```python", "```java", "```go", "```c", "```cpp", "```rust", "```php",
+                     "```tsx"]:
             result = result.replace(mark, "")
 
         # Pre-deployment checklist (language-specific)
@@ -224,7 +234,6 @@ def lint_file(file_path, code):
         }
 
         # Append deployment reminder as comments
-
         extra_section = f"\n\n{comment_symbol} ⚠️ Code has been auto-corrected. Please review before deployment.\n\n"
         extra_section += f"{comment_symbol} ✅ Pre-Deployment Checklist for {language}:\n"
         for item in checklist.get(language, ["Review code manually", "Run tests", "Run security scans"]):
@@ -234,7 +243,8 @@ def lint_file(file_path, code):
         return result.strip() + "\n" + extra_section
 
     except requests.exceptions.RequestException as e:
-        return f"{comment_symbol} Error linting {file_path}: {e}"
+        print(f"❌ Error linting {file_path}: {e}", file=sys.stderr)
+        return None  # Return None on failure
 
 
 def get_changed_files():
@@ -269,22 +279,27 @@ def main():
         code = read_file(file_path)
         result = lint_file(file_path, code)
 
-        overwrite_file(file_path, result)
-        print(f"✅ Lint results applied to {file_path}")
+        if result is not None:
+            overwrite_file(file_path, result)
+            print(f"✅ Lint results applied to {file_path}")
 
-        # Run basic pre-checks for all languages
-        language, _ = detect_language(file_path)
-        checks = run_basic_checks(file_path, language)
-        for cmd in checks:
-            print(f"[CHECK] Running: {cmd}")
-            try:
-                subprocess.run(cmd, shell=True, check=True)
-            except subprocess.CalledProcessError as e:
-                print(f"❌ Check failed: {e}")
+            # Run basic pre-checks for all languages
+            language, _ = detect_language(file_path)
+            checks = run_basic_checks(file_path, language)
+            for cmd in checks:
+                print(f"[CHECK] Running: {cmd}")
+                try:
+                    # Note: We are running with shell=True which can be a security risk if the input
+                    # is not trusted. For this use case, it's fine.
+                    subprocess.run(cmd, shell=True, check=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"❌ Check failed: {e}")
+                    deployment_blocked = True
+
+            # If the AI inserted fixes, block deployment
+            if "Code has been auto-corrected" in result:
                 deployment_blocked = True
-
-        # If the AI inserted fixes, block deployment
-        if "Code has been auto-corrected" in result:
+        else:
             deployment_blocked = True
 
     if deployment_blocked:
@@ -292,6 +307,7 @@ def main():
         print("⚠️ Code had bugs or checks failed.")
         print("✅ Please review the code manually and run the pre-deployment checklist.")
         print("➡️ After verification, rerun deployment.\n")
+        sys.exit(1)
     else:
         print("\n✅ Code passed without auto-fixes. Safe to deploy!\n")
         # Example: trigger deployment here

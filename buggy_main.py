@@ -1,18 +1,20 @@
-def is_even(number):
+def find_largest_number(numbers):
     """
-    Checks if a number is even.
-    The bug: It returns True for both even and some odd numbers.
+    Finds the largest number in a list.
+    The bug: it fails if all numbers are negative.
     """
-    if number % 2 == 0 or number % 2 == 1:
-        return True
-    else:
-        return False
-
+    largest = 0 # This is the bug
+    for number in numbers:
+        if number > largest:
+            largest = number
+    return largest
 
 # This will work as expected
-print(f"Is 4 an even number? {is_even(4)}")
-# Expected: True, Actual: True
+positive_list = [10, 5, 20, 15]
+print(f"Largest number in {positive_list}: {find_largest_number(positive_list)}")
+# Expected: 20, Actual: 20
 
 # This will fail
-print(f"Is 5 an even number? {is_even(5)}")
-# Expected: False, Actual: True (Incorrect)
+negative_list = [-10, -5, -20, -15]
+print(f"Largest number in {negative_list}: {find_largest_number(negative_list)}")
+# Expected: -5, Actual: 0 (Incorrect)
