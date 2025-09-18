@@ -64,9 +64,9 @@ Code:
 
     try:
         response = requests.post(
-            "http://192.168.0.103:11434/api/generate",
+            "http://192.168.0.117:11434/api/generate",
             json={
-                "model": "llama3:8b",
+                "model": "qwen2.5:7b-instruct-q4_k_m",
                 "prompt": prompt,
                 "stream": False,
                 "options": {"temperature": 0},

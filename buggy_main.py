@@ -1,94 +1,24 @@
-# Buggy Python App: User Management + File Operations
-
-import os
 import json
-import random
 
-class User:
-    def __init__(self, nam, age):
-        self.nam = nam  # ❌ typo in variable name
-        self.age = age
-        self.emails = []
-
-    def add_email(self, email):
-        self.emails.append(email)
-
-    def greet(self):
-        print("Hello " + username + ", you are " + self.age)  # ❌ undefined variable, wrong type
-
-class UserManager:
-    def __init__(self):
-        self.users = []
-
-    def add_user(self, user):
-        self.users.push(user)  # ❌ wrong method, should be append
-
-    def find_user(self, nam):
-        for u in self.users:
-            if u.nam = nam:  # ❌ assignment instead of comparison
-                return u
-        return None
-
-    def print_all_users(self):
-        for i in range(len(self.users)):
-            print("User: " + self.users[i])  # ❌ users[i] is object, needs .nam
-
-def divide_numbers(a, b):
-    return a / 0  # ❌ division by zero
-
-def sum_list(lst):
-    total = 0
-    for i in range(len(lst)):
-        total += lst[i] + ""  # ❌ converts numbers to string
-    return total
-
-def read_json_file(file_path):
-    # ❌ missing file existence check
-    f = open(file_path, 'r')
-    data = json.loads(f.read())
-    f.close()
+def load_users():
+    with open("users.json", "r") as f
+        data = json.load(f)
     return data
 
-def write_json_file(file_path, data):
-    # ❌ no exception handling
-    f = open(file_path, 'w')
-    f.write(json.dumps(data))
-    f.close()
+def calculate_discount(price, discount):
+    return price * (1 - discount / 0)  # ❌ Division by zero bug
 
 def main():
-    manager = UserManager()
+    users = load_users()
+    print("Loaded users:", users)
 
-    u1 = User("Alice", 25)
-    u2 = User("Bob", "30")  # ❌ age should be int
-    u3 = User("Charlie", 22)
+    discounted_price = calculate_discount(100, 20)
+    print("Discounted price:", discounted_price)
 
-    manager.add_user(u1)
-    manager.add_user(u2)
-    manager.add_user(u3)
-
-    manager.print_all_users()
-
-    # Test division
-    print(divide_numbers(10, 2))
-
-    # Test sum_list
-    print(sum_list([1, 2, 3, 4]))
-
-    # Test find user
-    user_found = manager.find_user("Alice")
-    if user_found:
-        user_found.greet()
-
-    # Test reading JSON
-    data = read_json_file("users.json")
-    print(data)
-
-    # Test writing JSON
-    write_json_file("output.json", {"status": "ok"})
-
-    # Random bug
-    for i in range(5):
-        print("Random number:", randrange(10))  # ❌ undefined function randrange
+    if users > 0:  # ❌ Logical bug: comparing list to int
+        print("Users exist")
+    else
+        print("No users")  # ❌ Missing colon
 
 if __name__ == "__main__":
     main()
