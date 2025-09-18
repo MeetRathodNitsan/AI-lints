@@ -2,9 +2,9 @@ name: AI Code Lint
 
 on:
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
   push:
-    branches: [ "master" ]
+    branches: ["master"]
 
 jobs:
   ai-lint:
@@ -12,12 +12,14 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # fetch full history for diff
+          # fetch-depth: 0 is correct, but for pull requests,
+          # you can get a cleaner diff by fetching the base branch as well.
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -28,22 +30,42 @@ jobs:
           .venv/bin/pip install -r requirements.txt
           .venv/bin/pip install requests fastapi uvicorn
 
-      - name: Get changed Python files
-        id: files
+      - name: Get changed Python files (Pull Request)
+        id: pr-files
+        if: github.event_name == 'pull_request'
         run: |
-          echo "CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.py$' || true)" >> $GITHUB_ENV
+          # The correct way to get the diff for a pull request
+          # It compares the head of the branch to the merge-base of the target branch.
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.py$')
+          # To handle files with spaces, we use a different separator for the next step.
+          # We also handle the case where no files are found.
+          if [[ -n "$CHANGED_FILES" ]]; then
+            echo "CHANGED_FILES=${CHANGED_FILES//'\n'/' '}" >> $GITHUB_ENV
+          fi
+
+      - name: Get changed Python files (Push)
+        id: push-files
+        if: github.event_name == 'push'
+        run: |
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.py$')
+          if [[ -n "$CHANGED_FILES" ]]; then
+            echo "CHANGED_FILES=${CHANGED_FILES//'\n'/' '}" >> $GITHUB_ENV
+          fi
 
       - name: Run AI Lint
         if: env.CHANGED_FILES != ''
         run: |
           echo "[DEBUG] Files to lint: $CHANGED_FILES"
+          # The for loop is now safer because we replaced newlines with spaces.
           for f in $CHANGED_FILES; do
+            # Using the full path to the ai_lint.py script is a good practice
             .venv/bin/python ai_lint.py "$f"
           done
 
-      - name: Check for unstaged changes (optional)
+      - name: Check for unstaged changes
         run: |
-          if [[ -n $(git diff) ]]; then
+          git_status=$(git status --porcelain)
+          if [[ -n "$git_status" ]]; then
             echo "❌ Files were fixed automatically. Please commit the changes."
             git diff
             exit 1
