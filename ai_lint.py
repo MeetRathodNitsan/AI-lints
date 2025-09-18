@@ -53,7 +53,11 @@ def run_basic_checks(file_path, language):
     Run basic pre-deployment checks depending on language.
     """
     checks = {
-        "Python": ["flake8 --max-line-length=120", "mypy", "pytest --maxfail=1"],
+        "Python": [
+            "./.venv/bin/flake8 --max-line-length=120",
+            "./.venv/bin/mypy",
+            "./.venv/bin/pytest --maxfail=1"
+        ],
         "JavaScript": ["eslint", "npm test"],
         "TypeScript": ["eslint", "tsc", "npm test"],
         "Java": ["javac {file}", "mvn test"],

@@ -1,22 +1,18 @@
-def sum_positive_numbers(numbers):
+def is_even(number):
     """
-    Sums all positive numbers in a list.
-    The bug: it adds a number to the sum even if it's negative.
+    Checks if a number is even.
+    The bug: It returns True for both even and some odd numbers.
     """
-    total = 0
-    for number in numbers:
-        if number >= 0:
-            total += number
-        else:
-            total += number  # This is the bug
-    return total
+    if number % 2 == 0 or number % 2 == 1:
+        return True
+    else:
+        return False
+
 
 # This will work as expected
-positive_list = [1, 2, 3, 4]
-print(f"Sum of positive numbers: {sum_positive_numbers(positive_list)}")
-# Expected: 10, Actual: 10
+print(f"Is 4 an even number? {is_even(4)}")
+# Expected: True, Actual: True
 
 # This will fail
-mixed_list = [1, -2, 3, -4]
-print(f"Sum of mixed numbers: {sum_positive_numbers(mixed_list)}")
-# Expected: 4, Actual: -2 (Incorrect)
+print(f"Is 5 an even number? {is_even(5)}")
+# Expected: False, Actual: True (Incorrect)
