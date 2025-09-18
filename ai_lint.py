@@ -112,7 +112,7 @@ def lint_file(file_path, code):
 
     # API request and response handling logic
     try:
-        response = requests.post(LINT_ENDPOINT, json={"diff": prompt}, timeout=120)
+        response = requests.post(LINT_ENDPOINT, json={"diff": prompt}, timeout=300)
         response.raise_for_status()
         result = response.text.strip()
 
